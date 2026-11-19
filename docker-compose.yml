@@ -18,6 +18,9 @@ services:
       REGISTRY_DB_USER: ${REGISTRY_DB_USER}
       REGISTRY_DB_PASSWORD: ${REGISTRY_DB_PASSWORD}
 
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+
     ports:
       - "127.0.0.1:5433:5432"
 
@@ -49,6 +52,7 @@ services:
       - start-dev
       - --http-enabled=true
       - --hostname-strict=false
+      - --import-realm
 
     environment:
       REGISTRY_DB_URL: jdbc:postgresql://postgres:5432/identity_registry
@@ -67,6 +71,9 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
 
       KC_HEALTH_ENABLED: true
+
+    volumes:
+      - ./infrastructure/keycloak:/opt/keycloak/data/import:ro
 
     ports:
       - "127.0.0.1:${KEYCLOAK_PORT}:8080"

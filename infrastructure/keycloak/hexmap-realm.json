@@ -1,0 +1,72 @@
+{
+  "realm": "hexmap",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "roles": {
+    "realm": [
+      { "name": "user",  "description": "Regular application user" },
+      { "name": "admin", "description": "Application administrator" }
+    ]
+  },
+  "defaultRole": {
+    "name": "default-roles-hexmap",
+    "composite": true,
+    "composites": { "realm": ["user", "offline_access", "uma_authorization"] }
+  },
+  "clients": [
+    {
+      "clientId": "hexmap-web",
+      "name": "Hexmap web application",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:8081/*"],
+      "webOrigins": ["http://localhost:8081"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8081/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "hexmap-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "hexmap-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "demo-user",
+      "enabled": true,
+      "email": "demo-user@example.local",
+      "emailVerified": true,
+      "firstName": "Demo",
+      "lastName": "User",
+      "credentials": [{ "type": "password", "value": "demo-user", "temporary": false }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "demo-admin",
+      "enabled": true,
+      "email": "demo-admin@example.local",
+      "emailVerified": true,
+      "firstName": "Demo",
+      "lastName": "Admin",
+      "credentials": [{ "type": "password", "value": "demo-admin", "temporary": false }],
+      "realmRoles": ["user", "admin"]
+    }
+  ]
+}

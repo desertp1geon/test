@@ -12,7 +12,9 @@ psql \
     --set=kc_user="$KEYCLOAK_DB_USER" \
     --set=kc_password="$KEYCLOAK_DB_PASSWORD" \
     --set=registry_user="$REGISTRY_DB_USER" \
-    --set=registry_password="$REGISTRY_DB_PASSWORD" <<'EOSQL'
+    --set=registry_password="$REGISTRY_DB_PASSWORD" \
+    --set=app_user="$APP_DB_USER" \
+    --set=app_password="$APP_DB_PASSWORD" <<'EOSQL'
 
 SELECT format(
     'CREATE ROLE %I LOGIN PASSWORD %L',
@@ -27,6 +29,12 @@ SELECT format(
 ) \gexec
 
 SELECT format(
+    'CREATE ROLE %I LOGIN PASSWORD %L',
+    :'app_user',
+    :'app_password'
+) \gexec
+
+SELECT format(
     'CREATE DATABASE %I OWNER %I',
     'keycloak',
     :'kc_user'
@@ -36,6 +44,12 @@ SELECT format(
     'CREATE DATABASE %I OWNER %I',
     'identity_registry',
     :'registry_user'
+) \gexec
+
+SELECT format(
+    'CREATE DATABASE %I OWNER %I',
+    'hexmap_app',
+    :'app_user'
 ) \gexec
 
 EOSQL

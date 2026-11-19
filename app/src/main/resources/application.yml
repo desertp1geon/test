@@ -1,0 +1,21 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: hexmap-app
+  datasource:
+    url: ${APP_DB_URL:jdbc:postgresql://localhost:5433/hexmap_app}
+    username: ${APP_DB_USER:hexmap_user}
+    password: ${APP_DB_PASSWORD}
+  flyway:
+    enabled: true
+  jackson:
+    default-property-inclusion: non_null
+
+hexmap:
+  security:
+    # Must equal the "iss" claim of Keycloak tokens (the URL the browser uses).
+    issuer: ${KEYCLOAK_ISSUER:http://localhost:8080/realms/hexmap}
+    jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:${KEYCLOAK_ISSUER:http://localhost:8080/realms/hexmap}/protocol/openid-connect/certs}
+    audience: ${KEYCLOAK_AUDIENCE:hexmap-api}

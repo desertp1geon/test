@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Гексагональна карта України</title>
+<style>
+  :root {
+    --bg: #f3f5f8; --surface: #ffffff; --text: #101828; --muted: #667085; --line: #e0e4ea;
+    --accent: #0d9488; --accent-text: #ffffff; --danger: #b42318;
+    --hex: #cfdcec; --hex-edge: rgba(255,255,255,.55); --border: #4b5b73; --kyiv: #7f8fe0;
+    --ov-hover: rgba(16,24,40,.12); --ov-neigh: rgba(16,24,40,.22);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1220; --surface: #121a2b; --text: #e6ebf5; --muted: #93a0b8; --line: #243049;
+      --accent: #14b8a6; --accent-text: #04201d; --danger: #f97066;
+      --hex: #1d3a5c; --hex-edge: rgba(11,18,32,.6); --border: #a9bbd6; --kyiv: #5b6fd0;
+      --ov-hover: rgba(255,255,255,.12); --ov-neigh: rgba(255,255,255,.22);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; overflow: hidden;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+    background: var(--surface); border-bottom: 1px solid var(--line); flex-wrap: wrap;
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 650; margin-right: auto; }
+  .chip {
+    border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px;
+    font-size: 12px; color: var(--muted); background: transparent; white-space: nowrap;
+  }
+  button.chip { cursor: pointer; color: var(--text); font: inherit; font-size: 12px; }
+  button.chip:hover { border-color: var(--accent); }
+  .btn {
+    font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 9px 14px;
+    background: var(--accent); color: var(--accent-text); cursor: pointer; width: 100%;
+  }
+  .btn.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .btn.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  .btn:disabled { opacity: .55; cursor: default; }
+  main { position: relative; flex: 1; min-height: 0; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; display: block; }
+  canvas.hovering { cursor: pointer; }
+  #tip {
+    position: absolute; pointer-events: none; padding: 5px 9px; border-radius: 6px; font-size: 12px;
+    background: var(--surface); border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,.18);
+    transform: translate(12px, 12px); display: none; max-width: 240px;
+  }
+  #tip b { display: block; }
+  #tip span { color: var(--muted); }
+  .zoom { position: absolute; left: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .zoom button {
+    width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--text); font-size: 18px; cursor: pointer;
+  }
+  .legend {
+    position: absolute; left: 12px; bottom: 12px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px 10px; font-size: 12px; color: var(--muted); max-width: 290px;
+  }
+  .legend div { display: flex; align-items: center; gap: 8px; margin: 2px 0; }
+  .sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  .legend p { margin: 6px 0 0; font-size: 11px; }
+  aside {
+    position: absolute; right: 12px; top: 12px; width: 320px; max-height: calc(100% - 24px); overflow: auto;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.16); display: none;
+  }
+  aside.open { display: block; }
+  aside h2 { margin: 0 28px 2px 0; font-size: 17px; }
+  aside .sub { color: var(--muted); margin-bottom: 12px; }
+  aside dl { margin: 0 0 14px; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; }
+  aside dt { color: var(--muted); }
+  aside dd { margin: 0; text-align: right; word-break: break-all; }
+  aside .close {
+    position: absolute; right: 8px; top: 8px; border: 0; background: transparent; color: var(--muted);
+    font-size: 20px; cursor: pointer; width: 32px; height: 32px;
+  }
+  #err { color: var(--danger); font-size: 12px; margin-top: 8px; min-height: 1em; }
+  .notice { margin-top: 10px; font-size: 11px; color: var(--muted); }
+  #loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
+  @media (max-width: 720px) {
+    aside {
+      right: 0; left: 0; top: auto; bottom: 0; width: auto; max-height: 55%;
+      border-radius: 14px 14px 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+    .legend { display: none; }
+    header { padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Карта зон України</h1>
+  <span class="chip" title="Джерело даних про тривоги ще не підключене">Статус тривог: немає даних</span>
+  <button class="chip" id="mine" hidden></button>
+  <span class="chip" id="user" hidden></span>
+  <button class="chip" id="auth">Увійти</button>
+</header>
+
+<main id="stage">
+  <canvas id="map" aria-label="Гексагональна карта України"></canvas>
+  <div id="loading">Завантаження карти…</div>
+  <div id="tip"><b></b><span></span></div>
+
+  <div class="zoom">
+    <button id="zin" aria-label="Збільшити">+</button>
+    <button id="zout" aria-label="Зменшити">−</button>
+    <button id="zfit" aria-label="Показати всю країну" title="Вся країна">⤢</button>
+  </div>
+
+  <div class="legend">
+    <div><span class="sw" style="background:var(--hex)"></span>Звичайна зона</div>
+    <div><span class="sw" style="background:var(--accent)"></span>Ваша зона моніторингу</div>
+    <div><span class="sw" style="background:linear-gradient(var(--ov-neigh),var(--ov-neigh)),var(--hex)"></span>Суміжні з обраною</div>
+    <div><span class="sw" style="background:var(--kyiv)"></span>м. Київ (окрема одиниця)</div>
+    <div><span class="sw" style="background:transparent;border:2px solid var(--border)"></span>Межі областей</div>
+    <p>Допоміжний інструмент. Не замінює офіційні канали оповіщення. Відсутність даних про тривогу не означає відсутність небезпеки.</p>
+  </div>
+
+  <aside id="panel" aria-live="polite">
+    <button class="close" id="pclose" aria-label="Закрити">×</button>
+    <h2 id="pname"></h2>
+    <div class="sub" id="pregion"></div>
+    <dl>
+      <dt>Статус тривоги</dt><dd>немає даних</dd>
+      <dt>Суміжних зон</dt><dd id="pneigh">…</dd>
+      <dt>H3</dt><dd id="ph3"></dd>
+    </dl>
+    <button class="btn" id="pbtn"></button>
+    <div id="err" role="alert"></div>
+    <div class="notice">Статуси тривог з'являться після підключення джерела подій.</div>
+  </aside>
+</main>
+
+<script type="module">
+import Keycloak from 'https://cdn.jsdelivr.net/npm/keycloak-js@26.2.0/lib/keycloak.js';
+
+// Keycloak connection (public client, Authorization Code + PKCE).
+const CFG = { url: 'http://localhost:8080', realm: 'hexmap', clientId: 'hexmap-web' };
+
+const $ = id => document.getElementById(id);
+const cv = $('map'), ctx = cv.getContext('2d');
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let C = {};                                          // theme colours, refreshed once per frame
+const PALETTE = {                                    // muted tints, so adjacent regions differ
+  light: ['#cfdcec', '#d9d3ec', '#cfe6df', '#eadfcb', '#e6d0da'],
+  dark:  ['#1d3a5c', '#2f3a66', '#1f4b52', '#403a5c', '#2f4b3f']
+};
+const KYIV_CITY = 'UA-30';                           // ISO 3166-2 code of the city of Kyiv
+let regionTint = new Map();                          // region code -> palette index
+let borderPath = null;                               // region borders + country outline, world coords
+const readColors = () => {
+  C = Object.fromEntries(['--accent', '--hex-edge', '--text', '--bg', '--muted', '--border', '--kyiv', '--ov-hover', '--ov-neigh'].map(n => [n, css(n)]));
+  C.palette = matchMedia('(prefers-color-scheme: dark)').matches ? PALETTE.dark : PALETTE.light;
+};
+
+// ---------- state ----------
+let W = 0, H = 0, dpr = 1;
+const view = { k: 1, tx: 0, ty: 0 };
+let fitK = 1;
+let hexes = [], regions = [], cutoff2 = 1, hexRad = 1;
+let hover = null, selected = null, neighbourIds = new Set(), mySub = null;
+let kc = null, authenticated = false;
+const COS = Math.cos(48.5 * Math.PI / 180);           // equirectangular, centred on Ukraine
+const proj = (lat, lng) => [lng * COS, -lat];
+
+// ---------- data ----------
+async function loadMap() {
+  const res = await fetch('/api/hexagons');
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  hexes = data.map(h => {
+    const pts = h.boundary.map(([la, ln]) => proj(la, ln));
+    const path = new Path2D();
+    pts.forEach(([x, y], i) => i ? path.lineTo(x, y) : path.moveTo(x, y));
+    path.closePath();
+    const [cx, cy] = proj(h.lat, h.lng);
+    return { ...h, pts, path, cx, cy };
+  });
+  const byRegion = new Map();
+  for (const h of hexes) {
+    const r = byRegion.get(h.regionCode) || { name: h.regionName, sx: 0, sy: 0, n: 0 };
+    r.sx += h.cx; r.sy += h.cy; r.n++;
+    byRegion.set(h.regionCode, r);
+  }
+  regions = [...byRegion.values()].map(r => ({
+    label: r.name.replace(/ область$/, '').replace('Автономна Республіка ', 'АР ').replace('місто ', 'м. '),
+    x: r.sx / r.n, y: r.sy / r.n, n: r.n
+  }));
+  const h0 = hexes[0];
+  hexRad = Math.max(...h0.pts.map(([x, y]) => Math.hypot(x - h0.cx, y - h0.cy)));
+  cutoff2 = (hexRad * 1.3) ** 2;
+  buildBorders();
+}
+
+/**
+ * Finds region borders without any extra API data. For every hexagon edge the
+ * neighbour is the cell whose centre is the mirror image of this cell's centre across
+ * the edge midpoint (robust against rounding of outline coordinates).
+ * Edges between different regions, and edges on the country outline, go into borderPath.
+ * Region adjacency is then used to tint neighbouring regions differently.
+ */
+function buildBorders() {
+  const S = hexRad * 2, grid = new Map();
+  for (const h of hexes) {
+    const k = Math.floor(h.cx / S) + ',' + Math.floor(h.cy / S);
+    (grid.get(k) || grid.set(k, []).get(k)).push(h);
+  }
+  const nearest = (x, y) => {
+    let best = null, bd = Infinity;
+    const ix = Math.floor(x / S), iy = Math.floor(y / S);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++)
+      for (const o of grid.get((ix + dx) + ',' + (iy + dy)) || []) {
+        const d = (o.cx - x) ** 2 + (o.cy - y) ** 2;
+        if (d < bd) { bd = d; best = o; }
+      }
+    return [best, Math.sqrt(bd)];
+  };
+  const path = new Path2D(), adj = new Map();
+  const link = (a, b) => { (adj.get(a) || adj.set(a, new Set()).get(a)).add(b); };
+  for (const h of hexes) {
+    const n = h.pts.length;                                   // 6, or 7-8 where H3 adds a distortion vertex
+    for (let i = 0; i < n; i++) {
+      const [x1, y1] = h.pts[i], [x2, y2] = h.pts[(i + 1) % n];
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      const [o, d] = nearest(2 * mx - h.cx, 2 * my - h.cy);
+      const isNeighbour = o && o !== h && d < Math.hypot(mx - h.cx, my - h.cy) * 0.8;
+      if (!isNeighbour || o.regionCode !== h.regionCode) { path.moveTo(x1, y1); path.lineTo(x2, y2); }
+      if (isNeighbour && o.regionCode !== h.regionCode) { link(h.regionCode, o.regionCode); link(o.regionCode, h.regionCode); }
+    }
+  }
+  borderPath = path;
+
+  // Greedy colouring: the most connected regions first, never reuse a neighbour's tint.
+  regionTint = new Map();
+  const codes = [...adj.keys()].filter(c => c !== KYIV_CITY).sort((a, b) => adj.get(b).size - adj.get(a).size);
+  for (const c of codes) {
+    const used = new Set([...adj.get(c)].map(n => regionTint.get(n)));
+    let t = 0; while (used.has(t) && t < PALETTE.light.length - 1) t++;
+    regionTint.set(c, t);
+  }
+}
+
+// ---------- viewport ----------
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  draw();
+}
+function fit() {
+  if (!hexes.length) return;
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const h of hexes) for (const [x, y] of h.pts) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  fitK = Math.min(W / (x1 - x0), H / (y1 - y0)) * 0.92;
+  view.k = fitK;
+  view.tx = W / 2 - fitK * (x0 + x1) / 2;
+  view.ty = H / 2 - fitK * (y0 + y1) / 2;
+  draw();
+}
+function zoomAt(sx, sy, f) {
+  const nk = Math.min(Math.max(view.k * f, fitK * 0.6), fitK * 60);
+  const r = nk / view.k;
+  view.tx = sx - (sx - view.tx) * r;
+  view.ty = sy - (sy - view.ty) * r;
+  view.k = nk;
+  draw();
+}
+function flyTo(h) {
+  view.k = Math.max(view.k, fitK * 6);
+  view.tx = W / 2 - view.k * h.cx;
+  view.ty = H / 2 - view.k * h.cy;
+  draw();
+}
+
+// ---------- drawing ----------
+function baseFill(h) {
+  if (mySub && h.h3Index === mySub.h3Index) return C['--accent'];
+  if (h.regionCode === KYIV_CITY) return C['--kyiv'];
+  return C.palette[regionTint.get(h.regionCode) ?? 0];
+}
+function draw() {
+  if (!W) return;
+  readColors();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  if (!hexes.length) return;
+
+  ctx.setTransform(dpr * view.k, 0, 0, dpr * view.k, dpr * view.tx, dpr * view.ty);
+  ctx.lineWidth = 0.8 / view.k;
+  ctx.strokeStyle = C['--hex-edge'];
+  for (const h of hexes) {
+    ctx.fillStyle = baseFill(h);
+    ctx.fill(h.path);
+    if (hover === h || neighbourIds.has(h.h3Index)) {         // overlay keeps the region tint visible
+      ctx.fillStyle = hover === h ? C['--ov-hover'] : C['--ov-neigh'];
+      ctx.fill(h.path);
+    }
+    ctx.stroke(h.path);
+  }
+  // Region borders and country outline.
+  if (borderPath) {
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.lineWidth = 1.8 / view.k; ctx.strokeStyle = C['--border'];
+    ctx.stroke(borderPath);
+  }
+  // Selection is an outline, so it never hides the zone's status colour.
+  ctx.lineJoin = 'round';
+  if (selected) { ctx.lineWidth = 2.5 / view.k; ctx.strokeStyle = C['--text']; ctx.stroke(selected.path); }
+
+  // Region labels (screen space)
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '600 11px system-ui, sans-serif';
+  ctx.lineWidth = 3; ctx.strokeStyle = C['--bg']; ctx.fillStyle = C['--muted'];
+  const zoomed = view.k > fitK * 2.5;
+  for (const r of regions) {
+    if (!zoomed && r.n < 30) continue;          // avoid clutter at country scale
+    const x = view.tx + view.k * r.x, y = view.ty + view.k * r.y;
+    if (x < -50 || y < -20 || x > W + 50 || y > H + 20) continue;
+    ctx.strokeText(r.label, x, y); ctx.fillText(r.label, x, y);
+  }
+}
+
+// ---------- hit testing ----------
+function inPoly(px, py, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+    if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function hexAt(sx, sy) {
+  const wx = (sx - view.tx) / view.k, wy = (sy - view.ty) / view.k;
+  for (const h of hexes) {
+    const dx = h.cx - wx, dy = h.cy - wy;
+    if (dx * dx + dy * dy < cutoff2 && inPoly(wx, wy, h.pts)) return h;
+  }
+  return null;
+}
+
+// ---------- pointer input (mouse, touch, pinch) ----------
+const ptrs = new Map();
+let drag = null, moved = false, pinch = 0;
+const pinchInfo = () => { const [a, b] = [...ptrs.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+  drag = { x: e.offsetX, y: e.offsetY, tx: view.tx, ty: view.ty };
+  moved = false;
+  if (ptrs.size === 2) { pinch = pinchInfo().d; moved = true; }
+});
+cv.addEventListener('pointermove', e => {
+  if (!ptrs.has(e.pointerId)) { setHover(e); return; }
+  ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+  if (ptrs.size === 2) {
+    const p = pinchInfo();
+    if (pinch > 0) zoomAt(p.x, p.y, p.d / pinch);
+    pinch = p.d;
+  } else if (drag) {
+    const dx = e.offsetX - drag.x, dy = e.offsetY - drag.y;
+    if (Math.hypot(dx, dy) > 5) moved = true;
+    if (moved) { view.tx = drag.tx + dx; view.ty = drag.ty + dy; draw(); }
+  }
+});
+function endPointer(e, isUp) {
+  if (!ptrs.has(e.pointerId)) return;
+  const wasSingle = ptrs.size === 1;
+  ptrs.delete(e.pointerId);
+  if (isUp && wasSingle && !moved) onClick(e.offsetX, e.offsetY);
+  if (ptrs.size === 1) { const [p] = ptrs.values(); drag = { x: p.x, y: p.y, tx: view.tx, ty: view.ty }; moved = true; }
+  if (ptrs.size === 0) drag = null;
+}
+cv.addEventListener('pointerup', e => endPointer(e, true));
+cv.addEventListener('pointercancel', e => endPointer(e, false));
+cv.addEventListener('pointerleave', () => { if (!ptrs.size) { hover = null; $('tip').style.display = 'none'; draw(); } });
+cv.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.offsetX, e.offsetY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+$('zin').onclick = () => zoomAt(W / 2, H / 2, 1.6);
+$('zout').onclick = () => zoomAt(W / 2, H / 2, 1 / 1.6);
+$('zfit').onclick = fit;
+
+function setHover(e) {
+  const h = e.pointerType === 'mouse' ? hexAt(e.offsetX, e.offsetY) : null;
+  const tip = $('tip');
+  if (h !== hover) { hover = h; cv.classList.toggle('hovering', !!h); draw(); }
+  if (h) {
+    tip.firstElementChild.textContent = h.name;
+    tip.lastElementChild.textContent = (mySub && mySub.h3Index === h.h3Index) ? 'Ваша зона' : 'Натисніть, щоб відкрити';
+    tip.style.left = e.offsetX + 'px'; tip.style.top = e.offsetY + 'px'; tip.style.display = 'block';
+  } else tip.style.display = 'none';
+}
+
+// ---------- selection & panel ----------
+let selToken = 0, neighLabel = '…';
+function onClick(sx, sy) { select(hexAt(sx, sy)); }
+async function select(h) {
+  selected = h; neighbourIds = new Set(); neighLabel = '…'; $('err').textContent = '';
+  const token = ++selToken;
+  renderPanel(); draw();
+  if (!h) return;
+  try {
+    const res = await fetch('/api/hexagons/' + encodeURIComponent(h.h3Index));
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    if (token !== selToken) return;               // user already clicked elsewhere
+    neighbourIds = new Set(d.neighbours.map(n => n.h3Index));
+    neighLabel = String(d.neighbours.length);
+    $('pneigh').textContent = neighLabel;
+    draw();
+  } catch (e) {
+    if (token === selToken) { neighLabel = 'н/д'; $('pneigh').textContent = neighLabel; }
+  }
+}
+function renderPanel() {
+  const p = $('panel');
+  p.classList.toggle('open', !!selected);
+  if (!selected) return;
+  $('pname').textContent = selected.name;
+  $('pregion').textContent = selected.regionName;
+  $('ph3').textContent = selected.h3Index;
+  $('pneigh').textContent = neighLabel;
+  const b = $('pbtn');
+  b.disabled = false; b.className = 'btn';
+  if (!kc) { b.textContent = 'Авторизація недоступна'; b.disabled = true; b.onclick = null; }
+  else if (!authenticated) { b.textContent = 'Увійти, щоб підписатися'; b.onclick = () => kc.login(); }
+  else if (mySub && mySub.h3Index === selected.h3Index) { b.textContent = 'Відписатися від зони'; b.className = 'btn danger'; b.onclick = unsubscribe; }
+  else if (mySub) { b.textContent = 'Змінити зону на цю'; b.onclick = subscribe; }
+  else { b.textContent = 'Підписатися на цю зону'; b.onclick = subscribe; }
+}
+$('pclose').onclick = () => select(null);
+
+// ---------- API with Keycloak token ----------
+async function api(path, opts = {}) {
+  try { await kc.updateToken(30); } catch { kc.login(); throw new Error('Сесія завершилась'); }
+  const res = await fetch(path, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + kc.token, ...(opts.headers || {}) }
+  });
+  if (res.status === 401) { kc.login(); throw new Error('Потрібна авторизація'); }
+  if (res.status === 403) throw new Error('Недостатньо прав');
+  if (!res.ok) throw new Error('Помилка сервера (' + res.status + ')');
+  return res.status === 204 ? null : res.json();
+}
+async function mutate(fn) {
+  const b = $('pbtn'); b.disabled = true; $('err').textContent = '';
+  try { await fn(); } catch (e) { $('err').textContent = e.message; }
+  renderHeader(); renderPanel(); draw();
+}
+const subscribe = () => mutate(async () => {
+  mySub = await api('/api/subscription', { method: 'PUT', body: JSON.stringify({ h3Index: selected.h3Index }) });
+});
+const unsubscribe = () => mutate(async () => {
+  await api('/api/subscription', { method: 'DELETE' });
+  mySub = null;
+});
+
+// ---------- header / auth ----------
+function renderHeader() {
+  const mine = $('mine');
+  mine.hidden = !(authenticated && mySub);
+  if (!mine.hidden) mine.textContent = 'Моя зона: ' + mySub.name;
+  $('user').hidden = !authenticated;
+  const auth = $('auth');
+  if (!kc) { auth.hidden = true; return; }
+  auth.textContent = authenticated ? 'Вийти' : 'Увійти';
+  auth.onclick = () => authenticated ? kc.logout({ redirectUri: location.origin + '/' }) : kc.login();
+}
+$('mine').onclick = () => { const h = hexes.find(x => mySub && x.h3Index === mySub.h3Index); if (h) { flyTo(h); select(h); } };
+
+async function initAuth() {
+  try {
+    kc = new Keycloak(CFG);
+    authenticated = await kc.init({
+      onLoad: 'check-sso',
+      pkceMethod: 'S256',
+      checkLoginIframe: false,
+      silentCheckSsoRedirectUri: location.origin + '/silent-check-sso.html',
+      silentCheckSsoFallback: false           // never redirect anonymous visitors away
+    });
+    if (authenticated) {
+      const me = await api('/api/me');          // restores the subscription after re-login
+      mySub = me.subscription || null;
+      $('user').textContent = me.displayName || 'Користувач';
+      if (me.roles.includes('admin')) $('user').textContent += ' · адмін';
+    }
+  } catch (e) {
+    console.error('Auth init failed', e);
+    authenticated = !!(kc && kc.authenticated);
+    if (authenticated) $('user').textContent = 'Профіль недоступний';
+  }
+  renderHeader(); renderPanel(); draw();
+}
+
+// ---------- start ----------
+new ResizeObserver(() => { const first = !W; resize(); if (first) fit(); }).observe(cv);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+try {
+  await loadMap();
+  $('loading').remove();
+  resize(); fit();
+} catch (e) {
+  $('loading').textContent = 'Не вдалося завантажити карту. Спробуйте оновити сторінку.';
+  console.error(e);
+}
+initAuth();                                     // map is usable before auth finishes
+</script>
+</body>
+</html>

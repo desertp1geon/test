@@ -440,12 +440,12 @@ $('pclose').onclick = () => select(null);
 
 // ---------- API with Keycloak token ----------
 async function api(path, opts = {}) {
-  try { await kc.updateToken(30); } catch { kc.login(); throw new Error('Сесія завершилась'); }
+  try { await kc.updateToken(30); } catch {  throw new Error('Сесія завершилась'); }
   const res = await fetch(path, {
     ...opts,
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + kc.token, ...(opts.headers || {}) }
   });
-  if (res.status === 401) { kc.login(); throw new Error('Потрібна авторизація'); }
+  if (res.status === 401) {  throw new Error('Потрібна авторизація'); }
   if (res.status === 403) throw new Error('Недостатньо прав');
   if (!res.ok) throw new Error('Помилка сервера (' + res.status + ')');
   return res.status === 204 ? null : res.json();

@@ -18,4 +18,4 @@ hexmap:
     # Must equal the "iss" claim of Keycloak tokens (the URL the browser uses).
     issuer: ${KEYCLOAK_ISSUER:http://localhost:8080/realms/hexmap}
     jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:${KEYCLOAK_ISSUER:http://localhost:8080/realms/hexmap}/protocol/openid-connect/certs}
-    audience: ${KEYCLOAK_AUDIENCE:hexmap-api}
+    audience: ${KEYCLOAK_AUDIENCE:hexmap-web}

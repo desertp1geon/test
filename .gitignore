@@ -1,0 +1,39 @@
+
+# Maven
+target/
+**/target/
+
+# Maven Wrapper cache
+.mvn/wrapper/maven-wrapper.jar
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Java
+*.class
+*.log
+
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Certificates and private keys
+*.p12
+*.pfx
+*.jks
+*.pem
+*.key
+*.crt
+
+# Docker
+docker-data/
+
